@@ -5,15 +5,11 @@
 # Author: Scott Brink
 #
 
-# Colors to make each section pretty :)
-red="$(tput setaf 1)"
-reset="$(tput sgr0)"
-
 # Time Information
 function getTime {
 
-    now=`date +%T)`
-    timeZone=`timedatectl | grep "zone" | cut -d":" -f2)`
+    now=`date +%T`
+    timeZone=`timedatectl | grep "zone" | cut -d":" -f2`
     up=`uptime -p`
 
     echo "Current Time: ${now//,},"
@@ -27,7 +23,7 @@ function getOS {
 
     numerical=`cat /etc/os-release | grep PRETTY | cut -d"=" -f2`
     typical=`cat /etc/lsb-release | grep ID | cut -d"=" -f2`
-    kernel=`uname -v)`
+    kernel=`uname -v`
 
     echo "OS: ${typical//,},"
     echo "OS Version: ${numerical//,},"
@@ -39,13 +35,13 @@ function getOS {
 function getSpecs {
 
     cpu=`lscpu | grep "Model name:" | cut -d":" -f2 | awk '{$1=$1};1'`
-    ram=`awk '/^MemTotal:/{print $2}' /proc/meminfo) kB`
+    ram=`awk '/^MemTotal:/{print $2}' /proc/meminfo`
     numHdds=`lsblk | grep disk | wc -l`
     hdds=`lsblk | grep disk | cut -d" " -f1`
     mfs=`df -h`
 
     echo "CPU: ${cpu//,},"
-    echo "RAM: ${ram//,},"
+    echo "RAM: ${ram//,} kB,"
     echo "Number of HDDs: ${numHdds//,},"
     echo "Hard Drives: ${hdds//,},"
     echo "Filesystems: "    
@@ -182,7 +178,6 @@ function getFiles {
         echo "Documents: `ls /home/$user/Documents | tr '\n' ' '`"
     done
     echo ","
-
 }
 
 # Three personal things
@@ -208,7 +203,7 @@ function main {
     getTasks
     getNetwork
     getShares
-    getProcess
+   #getProcess
     getFiles
     getTBD
 }
