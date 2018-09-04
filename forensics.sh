@@ -8,6 +8,8 @@
 # Time Information
 function getTime {
 
+    echo "----------Time Info----------"
+
     now=`date +%T`
     timeZone=`timedatectl | grep "zone" | cut -d":" -f2`
     up=`uptime -p`
@@ -16,10 +18,14 @@ function getTime {
     echo "Time Zone: ${timeZone//,},"
     echo "Uptime: ${up//,},"
 
+    echo ""
+
 }
 
 # OS Information
 function getOS {
+
+    echo "----------OS Information----------"
 
     numerical=`cat /etc/os-release | grep PRETTY | cut -d"=" -f2`
     typical=`cat /etc/lsb-release | grep ID | cut -d"=" -f2`
@@ -29,10 +35,14 @@ function getOS {
     echo "OS Version: ${numerical//,},"
     echo "Kernel Version: ${kernel//,},"
 
+    echo ""
+
 }
 
 # Hardware Specs
 function getSpecs {
+
+    echo "----------Hardware-----------"
 
     cpu=`lscpu | grep "Model name:" | cut -d":" -f2 | awk '{$1=$1};1'`
     ram=`awk '/^MemTotal:/{print $2}' /proc/meminfo`
@@ -47,71 +57,96 @@ function getSpecs {
     echo "Filesystems: "    
     echo "${mfs//,},"
 
+    echo ""
 }
 
 # Hostname and Domain Info
 function getHostDomain {
     
-    host="host"
-    domain="domain"
-    
+    echo "----------Hostname and Domain----------"
+
+    host=`hostname`
+    domain=`domainname`
+
     echo "Hostname: ${host//,},"
     echo "Domain: ${domain//,},"
 
+    echo ""
 }
 
 # List Users
 function getUsers {
     
+    echo "----------Users----------"
+
     ## Include UID!
+    for users in `getent passwd | cut -d":" -f1` 
+    do
+        echo ""
+        users=$users
+        uid=`awk -F: -v u=$users '$1 == u {print $3}' /etc/passwd`
+        gid=`awk -F: -v u=$users '$1 == u {print $4}' /etc/passwd`
+        shell=`awk -F: -v u=$users '$1 == u {print $NF}' /etc/passwd`
 
-    # 0-99
-    systemUsers="sysUsers"
-    # 100-499
-    programUsers="program"
-    # >1000
-    addedUsers="added"
-    loginHistory="history"
+        echo "User: ${users//,}"
+        echo "UID: ${uid//,}"
+        echo "GID: ${gid//,}"
+        echo "Shell: ${shell//,}"
+    done
 
-    echo "System Users: ${systemUsers//,},"
-    echo "Program Users: ${programUsers//,},"
-    echo "Normal Users: ${addedUsers//,},"
+    echo ""
+    loginHistory=`last` 
     echo "Login History: ${loginHistory//,},"
+   
+    echo ""
 
 }
 
 # Start at Boot
 function getBootInfo {
 
-    services="services"
+    echo "----------Boot Information----------"
 
-    # include path
-    programs="programs"
+    services=`initctl list`
+    echo "Services: "
+    echo "${services//,},"
 
-    echo "Services: ${services//,},"
-    echo "Programs: ${programs//,},"
-
+    echo ""
 }
 
 # Scheduled Tasks
 function getTasks {
 
-    tasks="tasks"
+    echo "----------Scheduled Tasks----------"
 
-    echo "Scheduled Tasks: ${tasks//,},"
+    tasks=$(crontab -l 2>&1)
+
+    echo "Scheduled Tasks for `whoami`: ${tasks//,},"
+
+    echo ""
 
 }
 
 # Network Information
 function getNetwork {
 
-    arp="arp"
-    macInt="mac"
-    rtTable="route"
-    ipInt="ip"
-    dhcp="dhcp"
-    dns="dns"
-    gatewayInt="gateway"
+    echo "----------Network Information----------"
+
+    arp=`arp`
+    macInt=`ifconfig -a | awk '/^[a-z]/ { iface=$1; mac=$NF; next } /inet addr:/ { print iface, mac }'`
+    rtTable=`route`
+    ipInt=`ip addr | awk '
+    /^[0-9]+:/ { 
+        sub(/:/,"",$2); iface=$2 }
+    /^[[:space:]]*inet / { 
+        split($2, a, "/") 
+        print iface" : "a[1] }'`
+
+    # There is probably a one liner that is going to make me look very silly
+    dhcp=`journalctl | grep DHCPACK | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' | tr '\n' ' ' | awk '{print $2}'`
+
+    dns=`cat /etc/resolv.conf | grep nameserver`
+    gatewayInt=`ip route`
 
     # Include ip, port, protocol, name
     listeningServ="listening"
@@ -119,69 +154,87 @@ function getNetwork {
     # Include remote ip, local/remote port, protocol, timestamp, name
     establishedConn="established"
 
-    dnsCache="dnscache"
-
     echo "Arp Table: ${arp//,},"
-    echo "Interface Mac: ${macInt//,},"
-    echo "Routing Table: ${rtTable//,},"
-    echo "Interface IP: ${ipInt//,},"
+    echo "Interface Mac: "
+    echo "${macInt//,},"
+    echo "Routing Table: "
+    echo "${rtTable//,},"
+    echo "Interface IP:" 
+    echo "${ipInt//,},"
     echo "DHCP Server: ${dhcp//,},"
     echo "DNS Server: ${dns//,},"
-    echo "Interface Gateway: ${gatewayInt//,},"
+    echo "Interface Gateway: "
+    echo "${gatewayInt//,},"
     echo "Listening Services: ${listeningServ//,},"
     echo "Established Connections: ${establishedConn//,},"
-    echo "DNS Cache: ${dnsCache//,},"
 
+    echo ""
 }
 
-# Network Shares
-function getShares {
+# Printers
+function getPrinters {
 
-    networkShares="networkShares"
-    printers="printers"
-    wifiAccess="wifiAccess"
+    echo "----------Printers----------"
 
-    echo "Network Shares: ${networkShares//,},"
-    echo "Printers: ${printers//,},"
-    echo "Wifi Access Profile: ${wifiAccess//,},"
+    printers=`lpstat -p -d 2>&1`
 
+    echo "Printers: "
+    echo "${printers//,},"
+
+    echo ""
 }
 
 # Process List
 function getProcess {
 
+    echo "----------Process List----------"
+
     for pid in `ps -A -o pid`   
     do
-        processName="processName"
-        processId="id"
-        processParent="parentId"
-        processLocation="location"
-        processOwner="owner"
+        processName=`ps -p $pid -o comm= 2>/dev/null`
+        processId=$pid 
+        processParent=`ps -o ppid= -p $pid 2>/dev/null`
+        processLocation=`readlink /proc/$pid/exe 2>/dev/null`
 
-        echo "Process Name: ${processName//,}"
-        echo "Process ID: ${processId//,}"
-        echo "Parent ID: ${processParent//}"
-        echo "Procces Location: ${processLocation//,}"
-        echo "Procces Owner: ${proccesOwner//,}"
-
+        if [ -n "$processName" ]; then
+            echo "Process Name: ${processName//,}"
+        fi
+        if [ -n "$processId" ]; then
+            echo "Process ID: ${processId//,}"
+        fi
+        if [ -n "$processParent" ]; then
+            echo "Parent ID: ${processParent//}"
+        fi
+        if [ -n "$processLocation" ]; then
+            echo "Procces Location: ${processLocation//,}"
+        fi
+        echo ""
     done
+
     echo ","
+    echo ""
 }
 
 # File List
 function getFiles {
 
-    for user in `ls /home/`
+    echo "----------File List----------"
+
+    for usr in `ls /home/`
     do
-        echo "User: $user"
-        echo "Downloads: `ls /home/$user/Downloads | tr '\n' ' '`"
-        echo "Documents: `ls /home/$user/Documents | tr '\n' ' '`"
+        echo "User: $usr"
+        echo "Downloads: `ls /home/$usr/Downloads | tr '\n' ' '`"
+        echo "Documents: `ls /home/$usr/Documents | tr '\n' ' '`"
     done
+
     echo ","
+    echo ""
 }
 
 # Three personal things
 function getTBD {
+
+    echo "----------TBD----------"
 
     tbd1="tbd1"
     tbd2="tbd2"
@@ -191,21 +244,24 @@ function getTBD {
     echo "TBD 2: ${tbd2//,},"
     echo "TBD 3: ${tbd3//,}"
 
+    echo ""
 }
 
 function main {
-    getTime
-    getOS
-    getSpecs
-    getHostDomain
-    getUsers
-    getBootInfo
-    getTasks
-    getNetwork
-    getShares
-   #getProcess
-    getFiles
-    getTBD
+    echo ""
+    getTime         # done
+    getOS           # done
+    getSpecs        # done
+    getHostDomain   # done
+    getUsers        # done
+    getBootInfo     # done
+    getTasks        # done
+    getNetwork      # TODO, listening services and established connections
+                    #       hard to do without root :thinking:
+    getPrinters     # done
+    getProcess     # done
+    getFiles        # done
+    getTBD          # TODO, lel idk
 }
 
 main
