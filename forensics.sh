@@ -5,6 +5,8 @@
 # Author: Scott Brink
 #
 
+### Dependencies: sshpass 
+
 # Time Information
 function getTime {
 
@@ -148,7 +150,8 @@ function getNetwork {
     dns=`cat /etc/resolv.conf | grep nameserver`
     gatewayInt=`ip route`
 
-    # Include ip, port, protocol, name
+    
+    #
     listeningServ="listening"
 
     # Include remote ip, local/remote port, protocol, timestamp, name
@@ -165,9 +168,24 @@ function getNetwork {
     echo "DNS Server: ${dns//,},"
     echo "Interface Gateway: "
     echo "${gatewayInt//,},"
-    echo "Listening Services: ${listeningServ//,},"
-    echo "Established Connections: ${establishedConn//,},"
 
+    if [ "$EUID" -ne 0 ]; then
+        
+        echo "-----OUTPUT WILL BE LIMITED AS SCRIPT NOT RUNNING AS ROOT-----"
+
+        listeningServ=`netstat -tul4n` 
+        establishedConn=`netstat -tul4a | grep ESTABLISHED`
+        echo "Listening Services: ${listeningServ//,},"
+        echo "Established Connections: ${establishedConn//,},"
+
+    else
+ 
+        listeningServ=`netstat -tul4n` 
+        establishedConn=`netstat -tul4a | grep ESTABLISHED`
+        echo "Listening Services: ${listeningServ//,},"
+        echo "Established Connections: ${establishedConn//,},"
+       
+    fi
     echo ""
 }
 
@@ -215,6 +233,17 @@ function getProcess {
     echo ""
 }
 
+function getDrivers {
+    
+    echo "----------Drivers----------"
+
+    drivers=`lsmod`
+
+    echo $drivers
+
+}
+
+
 # File List
 function getFiles {
 
@@ -232,23 +261,23 @@ function getFiles {
 }
 
 # Three personal things
-function getTBD {
+function getOther {
 
-    echo "----------TBD----------"
+    echo "----------Other----------"
 
-    tbd1="tbd1"
-    tbd2="tbd2"
-    tbd3="tbd3"
+    ssh=`ls -la ~/.ssh/authorized_keys 2>/dev/null`
+    desktop=`ls ~/Desktop`
+    his=`cat ~/.bash_history 2>/dev/null`
 
-    echo "TBD 1: ${tbd1//,},"
-    echo "TBD 2: ${tbd2//,},"
-    echo "TBD 3: ${tbd3//,}"
+    echo "SSH Keyfile Permissions: ${ssh//,},"
+    echo "Desktop Contents: ${desktop//,},"
+    echo "History: ${his//,}"
 
     echo ""
 }
 
 function main {
-    echo ""
+    echo `whoami`
     getTime         # done
     getOS           # done
     getSpecs        # done
@@ -256,12 +285,11 @@ function main {
     getUsers        # done
     getBootInfo     # done
     getTasks        # done
-    getNetwork      # TODO, listening services and established connections
-                    #       hard to do without root :thinking:
+    getNetwork      # done
     getPrinters     # done
-    getProcess     # done
+    getProcess      # done
     getFiles        # done
-    getTBD          # TODO, lel idk
+    getOther        # done
 }
 
 main
